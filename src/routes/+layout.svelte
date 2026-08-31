@@ -1,10 +1,11 @@
-<script>
-  import '../app.css';
-  import { browser } from '$app/environment';
+<script lang="ts">
   import { onMount } from 'svelte';
-  import { themePreference } from '$lib/stores/theme';
-  onMount(() => { import('$lib/firebase'); });
-  let { children } = $props();
+  import '../app.css';
+  import { startAutoSync } from '$lib/services/datastore';
+  import SyncStatus from '$lib/components/SyncStatus.svelte';
+
+  onMount(() => startAutoSync());
 </script>
 
-{@render children()}
+<div class="fixed bottom-3 right-3 z-[200]"><SyncStatus /></div>
+<slot />

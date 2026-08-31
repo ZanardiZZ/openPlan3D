@@ -93,6 +93,20 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173) in your browser.
 
+### Local-first sync (optional)
+
+The editor is local-first: projects are persisted in IndexedDB and remain fully editable without a network connection. When the home server is available, changes are synchronized automatically in the background. The browser never sends project data to Firebase or another cloud service.
+
+The self-hosted sync server is in [`sync-server/`](sync-server/README.md). Start it on the home server with:
+
+```bash
+OPENPLAN3D_SYNC_HOST=0.0.0.0 \
+OPENPLAN3D_DATA_DIR=/srv/openplan3d/data \
+python3 sync-server/server.py
+```
+
+Set `PUBLIC_SYNC_URL` at build time, normally to `/api/sync` behind the same reverse proxy. If the server is offline, the outbox retains local changes and retries automatically. Updates use revisions; conflicts are preserved as a separate local copy rather than silently overwritten.
+
 ### Production Build
 
 ```bash
@@ -129,7 +143,7 @@ npm run preview
 - **[TypeScript](https://www.typescriptlang.org)** — Type safety
 - **[jsPDF](https://github.com/parallax/jsPDF)** — PDF generation
 - **[dxf-writer](https://github.com/nicholaschiasson/dxf-writer)** — DXF export
-- **[Firebase](https://firebase.google.com)** — Optional cloud sync
+- **Local sync server (Python + SQLite)** — Optional self-hosted synchronization
 
 ---
 
