@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { currentProject, viewMode, selectedElementId, selectedRoomId, createDefaultProject, loadProject, selectedTool, placingFurnitureId, elevationWallId, elevationPickMode } from '$lib/stores/project';
-  import { localStore } from '$lib/services/datastore';
+  import { dataStore, setDataStore } from '$lib/services/datastore';
+  import { waitForAuth } from '$lib/services/auth';
   import { createProjectFromRoomPlan, isRoomPlanJson } from '$lib/utils/roomplanImport';
   import TopBar from '$lib/components/toolbar/TopBar.svelte';
   import BuildPanel from '$lib/components/sidebar/BuildPanel.svelte';
@@ -85,7 +86,7 @@
           : undefined;
       const project = createProjectFromRoomPlan(data, `Room Capture ${code}`, options);
       loadProject(project);
-      await localStore.save(project);
+      await dataStore.save(project);
       // Remove ?import=CODE so a refresh doesn't re-import
       history.replaceState(null, '', `/editor?id=${project.id}`);
       return true;
@@ -111,6 +112,7 @@
 
   onMount(() => {
     (async () => {
+      setDataStore((await waitForAuth()) ? 'cloud' : 'local');
       const url = new URL(window.location.href);
 
       // iOS capture handoff: ?import=CODE
@@ -130,19 +132,19 @@
 
       const id = url.searchParams.get('id');
       if (id) {
-        const project = await localStore.load(id);
+        const project = await dataStore.load(id);
         if (project) {
           currentProject.set(project);
         } else {
           const p = createDefaultProject();
           currentProject.set(p);
-          await localStore.save(p);
+          await dataStore.save(p);
           history.replaceState(null, '', `/editor?id=${p.id}`);
         }
       } else {
         const p = createDefaultProject();
         currentProject.set(p);
-        await localStore.save(p);
+        await dataStore.save(p);
         history.replaceState(null, '', `/editor?id=${p.id}`);
       }
       ready = true;
@@ -153,7 +155,7 @@
     const unsub = currentProject.subscribe((p) => {
       if (!p) return;
       clearTimeout(saveTimeout);
-      saveTimeout = setTimeout(() => localStore.save(p), 500);
+      saveTimeout = setTimeout(() => dataStore.save(p), 500);
     });
     return () => { unsub(); clearTimeout(saveTimeout); };
   });

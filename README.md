@@ -93,6 +93,19 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173) in your browser.
 
+### Cloud save (optional)
+
+Cloud projects use Firebase Authentication and Cloud Firestore. Local storage remains the default when Firebase is not configured, so the editor still works offline.
+
+1. Create a Firebase project and register a web app.
+2. Enable **Email/Password** sign-in in Firebase Authentication.
+3. Create a Firestore database.
+4. Copy `.env.example` to `.env` and fill in the Firebase web-app values.
+5. Deploy the rules with `firebase deploy --only firestore:rules`.
+6. Run the app and use **Sign in to save** on the project list.
+
+Cloud project documents are restricted by `firestore.rules`: authenticated users can access projects they own or that list their UID in `sharedWith`. The current UI implements private owner projects; sharing and real-time conflict handling are intentionally separate follow-up work.
+
 ### Production Build
 
 ```bash

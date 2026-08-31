@@ -1,17 +1,34 @@
-import { initializeApp } from 'firebase/app';
-import { getAnalytics, isSupported } from 'firebase/analytics';
+import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
+import { getAuth, type Auth } from 'firebase/auth';
+import { getFirestore, type Firestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: 'AIzaSyBA-uD92gwICfqpqFH4EVC_CDHMLBNAemo',
-  authDomain: 'openplan3d.firebaseapp.com',
-  projectId: 'openplan3d',
-  storageBucket: 'openplan3d.firebasestorage.app',
-  messagingSenderId: '821030103548',
-  appId: '1:821030103548:web:daa8f23b8348b8cb322a79',
-  measurementId: 'G-SSDH4GMGFP',
+  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || '',
+  authDomain: import.meta.env.PUBLIC_FIREBASE_AUTH_DOMAIN || '',
+  projectId: import.meta.env.PUBLIC_FIREBASE_PROJECT_ID || '',
+  storageBucket: import.meta.env.PUBLIC_FIREBASE_STORAGE_BUCKET || '',
+  messagingSenderId: import.meta.env.PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
+  appId: import.meta.env.PUBLIC_FIREBASE_APP_ID || '',
 };
 
-export const app = initializeApp(firebaseConfig);
+export const isFirebaseConfigured = Object.values(firebaseConfig).every(Boolean);
 
-// Only init analytics in browser (not during SSR/build)
-export const analytics = isSupported().then((yes) => (yes ? getAnalytics(app) : null));
+let firebaseApp: FirebaseApp | null = null;
+let firebaseAuth: Auth | null = null;
+let firestore: Firestore | null = null;
+
+export function getFirebaseApp(): FirebaseApp {
+  if (!isFirebaseConfigured) throw new Error('Firebase is not configured');
+  if (!firebaseApp) firebaseApp = getApps()[0] ?? initializeApp(firebaseConfig);
+  return firebaseApp;
+}
+
+export function getFirebaseAuth(): Auth {
+  if (!firebaseAuth) firebaseAuth = getAuth(getFirebaseApp());
+  return firebaseAuth;
+}
+
+export function getFirestoreDb(): Firestore {
+  if (!firestore) firestore = getFirestore(getFirebaseApp());
+  return firestore;
+}

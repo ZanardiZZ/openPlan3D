@@ -2,9 +2,12 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { base } from '$app/paths';
-  import { localStore } from '$lib/services/datastore';
+  import { dataStore } from '$lib/services/datastore';
   import { createDefaultProject, currentProject } from '$lib/stores/project';
   import WelcomeScreen from '$lib/components/WelcomeScreen.svelte';
+  import CloudAuth from '$lib/components/CloudAuth.svelte';
+  import { waitForAuth } from '$lib/services/auth';
+  import { setDataStore } from '$lib/services/datastore';
   import { houseTemplates } from '$lib/utils/houseTemplates';
 
   let projects = $state<{ id: string; name: string; updatedAt: string }[]>([]);
@@ -16,19 +19,26 @@
   let contextMenuId = $state<string | null>(null);
   let showTemplateModal = $state(false);
 
-  onMount(async () => {
-    projects = await localStore.list();
+  async function refreshProjects() {
+    projects = await dataStore.list();
     // Sort by most recent
     projects.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
     // Load thumbnails
     const thumbs: Record<string, string | null> = {};
     for (const p of projects) {
-      thumbs[p.id] = localStore.getThumbnail(p.id);
+      thumbs[p.id] = dataStore.getThumbnail(p.id);
     }
     thumbnails = thumbs;
-    const seen = localStorage.getItem('hasSeenWelcome');
-    if (!seen && projects.length === 0) {
-      showWelcome = true;
+  }
+
+  onMount(async () => {
+    try {
+      setDataStore((await waitForAuth()) ? 'cloud' : 'local');
+      await refreshProjects();
+      const seen = localStorage.getItem('hasSeenWelcome');
+      if (!seen && projects.length === 0) showWelcome = true;
+    } catch (e) {
+      console.error('[Projects] Failed to load:', e);
     }
   });
 
@@ -36,7 +46,7 @@
     const template = houseTemplates[index];
     const p = template.create();
     currentProject.set(p);
-    await localStore.save(p);
+    await dataStore.save(p);
     showTemplateModal = false;
     goto(`${base}/editor?id=${p.id}`);
   }
@@ -44,21 +54,21 @@
   async function newProject() {
     const p = createDefaultProject('Untitled Project');
     currentProject.set(p);
-    await localStore.save(p);
+    await dataStore.save(p);
     goto(`${base}/editor?id=${p.id}`);
   }
 
   async function deleteProject(id: string) {
-    await localStore.delete(id);
+    await dataStore.delete(id);
     confirmDeleteId = null;
-    projects = (await localStore.list()).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    projects = (await dataStore.list()).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   }
 
   async function duplicateProject(id: string) {
-    const dup = await localStore.duplicate(id);
+    const dup = await dataStore.duplicate(id);
     if (dup) {
-      projects = (await localStore.list()).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-      thumbnails = { ...thumbnails, [dup.id]: localStore.getThumbnail(dup.id) };
+      projects = (await dataStore.list()).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      thumbnails = { ...thumbnails, [dup.id]: dataStore.getThumbnail(dup.id) };
     }
     contextMenuId = null;
   }
@@ -75,12 +85,12 @@
 
   async function commitRename(id: string) {
     if (renameValue.trim()) {
-      const p = await localStore.load(id);
+      const p = await dataStore.load(id);
       if (p) {
         p.name = renameValue.trim();
         p.updatedAt = new Date();
-        await localStore.save(p);
-        projects = (await localStore.list()).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+        await dataStore.save(p);
+        projects = (await dataStore.list()).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
       }
     }
     renamingId = null;
@@ -104,7 +114,7 @@
 <svelte:window onclick={() => { contextMenuId = null; }} />
 
 {#if showWelcome}
-  <WelcomeScreen onDismiss={() => { showWelcome = false; localStore.list().then(p => { projects = p.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()); }); }} />
+  <WelcomeScreen onDismiss={() => { showWelcome = false; dataStore.list().then(p => { projects = p.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()); }); }} />
 {/if}
 
 <div class="min-h-screen bg-gray-50">
@@ -116,6 +126,7 @@
         <p class="text-sm text-white/50 mt-0.5">{projects.length} project{projects.length !== 1 ? 's' : ''}</p>
       </div>
       <div class="flex items-center gap-3">
+        <CloudAuth onChanged={refreshProjects} />
         <button
           onclick={() => showTemplateModal = true}
           class="px-4 py-2.5 bg-white/10 text-white rounded-lg hover:bg-white/20 font-medium text-sm transition-all flex items-center gap-2 border border-white/20"

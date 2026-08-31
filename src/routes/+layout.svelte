@@ -1,10 +1,9 @@
-<script>
-  import '../app.css';
-  import { browser } from '$app/environment';
+<script lang="ts">
   import { onMount } from 'svelte';
-  import { themePreference } from '$lib/stores/theme';
-  onMount(() => { import('$lib/firebase'); });
-  let { children } = $props();
+  import { watchAuth } from '$lib/services/auth';
+  import { setDataStore } from '$lib/services/datastore';
+
+  onMount(() => watchAuth((user) => setDataStore(user ? 'cloud' : 'local')));
 </script>
 
-{@render children()}
+<slot />
