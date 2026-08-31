@@ -40,6 +40,9 @@
 
   // Wall drawing state
   let wallStart: Point | null = $state(null);
+  // Touch drawing uses one wall per gesture. Desktop mouse drawing keeps the
+  // continuous-chain behavior so connected walls can still be sketched quickly.
+  let touchDrawing = $state(false);
   // Digits typed while drawing a wall — Enter places the wall at exactly this length (issue #6)
   let typedWallLength = $state('');
   let wallSequenceFirst: Point | null = $state(null);
@@ -2015,6 +2018,9 @@
 
   function onMouseDown(e: MouseEvent) {
     markDirty();
+    if ((e as MouseEvent & { sourceCapabilities?: { firesTouchEvents?: boolean } }).sourceCapabilities?.firesTouchEvents) {
+      touchDrawing = true;
+    }
     if (e.button === 1 || (e.button === 0 && (spaceDown || $panMode || (e.shiftKey && currentTool === 'select')))) {
       isPanning = true;
       panStartX = e.clientX;
@@ -2230,7 +2236,14 @@
           wallSequenceFirst = null;
         } else if (Math.hypot(endPt.x - wallStart.x, endPt.y - wallStart.y) > 5) {
           addWall(wallStart, endPt);
-          wallStart = endPt;
+          if (touchDrawing) {
+            // A mobile tap finishes this wall. Do not treat the same gesture's
+            // follow-up compatibility click as the start of another wall.
+            wallStart = null;
+            wallSequenceFirst = null;
+          } else {
+            wallStart = endPt;
+          }
         }
       }
     } else if (tool === 'select') {
@@ -3710,6 +3723,7 @@
     aria-label="Floor plan editor canvas"
     style="cursor: {cursorStyle}"
     onmousedown={onMouseDown}
+    ontouchstart={() => { touchDrawing = true; }}
     onmousemove={onMouseMove}
     onmouseup={onMouseUp}
     ondblclick={onDblClick}
