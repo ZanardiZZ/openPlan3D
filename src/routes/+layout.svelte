@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import '../app.css';
   import { startAutoSync } from '$lib/services/datastore';
   import SyncStatus from '$lib/components/SyncStatus.svelte';
 
