@@ -1,9 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { watchAuth } from '$lib/services/auth';
-  import { setDataStore } from '$lib/services/datastore';
+  import { startAutoSync } from '$lib/services/datastore';
+  import SyncStatus from '$lib/components/SyncStatus.svelte';
 
-  onMount(() => watchAuth((user) => setDataStore(user ? 'cloud' : 'local')));
+  onMount(() => startAutoSync());
 </script>
 
+<div class="fixed bottom-3 right-3 z-[200]"><SyncStatus /></div>
 <slot />

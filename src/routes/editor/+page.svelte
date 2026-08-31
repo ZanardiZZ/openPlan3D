@@ -1,8 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { currentProject, viewMode, selectedElementId, selectedRoomId, createDefaultProject, loadProject, selectedTool, placingFurnitureId, elevationWallId, elevationPickMode } from '$lib/stores/project';
-  import { dataStore, setDataStore } from '$lib/services/datastore';
-  import { waitForAuth } from '$lib/services/auth';
+  import { dataStore } from '$lib/services/datastore';
   import { createProjectFromRoomPlan, isRoomPlanJson } from '$lib/utils/roomplanImport';
   import TopBar from '$lib/components/toolbar/TopBar.svelte';
   import BuildPanel from '$lib/components/sidebar/BuildPanel.svelte';
@@ -112,7 +111,6 @@
 
   onMount(() => {
     (async () => {
-      setDataStore((await waitForAuth()) ? 'cloud' : 'local');
       const url = new URL(window.location.href);
 
       // iOS capture handoff: ?import=CODE

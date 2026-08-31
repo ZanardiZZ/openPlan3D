@@ -2,12 +2,10 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { base } from '$app/paths';
-  import { dataStore } from '$lib/services/datastore';
+  import { dataStore, subscribeSync } from '$lib/services/datastore';
   import { createDefaultProject, currentProject } from '$lib/stores/project';
   import WelcomeScreen from '$lib/components/WelcomeScreen.svelte';
-  import CloudAuth from '$lib/components/CloudAuth.svelte';
-  import { waitForAuth } from '$lib/services/auth';
-  import { setDataStore } from '$lib/services/datastore';
+
   import { houseTemplates } from '$lib/utils/houseTemplates';
 
   let projects = $state<{ id: string; name: string; updatedAt: string }[]>([]);
@@ -33,7 +31,6 @@
 
   onMount(async () => {
     try {
-      setDataStore((await waitForAuth()) ? 'cloud' : 'local');
       await refreshProjects();
       const seen = localStorage.getItem('hasSeenWelcome');
       if (!seen && projects.length === 0) showWelcome = true;
@@ -41,6 +38,10 @@
       console.error('[Projects] Failed to load:', e);
     }
   });
+
+  onMount(() => subscribeSync((state) => {
+    if (state === 'synced' || state === 'conflict') void refreshProjects();
+  }));
 
   async function createFromTemplate(index: number) {
     const template = houseTemplates[index];
@@ -126,7 +127,7 @@
         <p class="text-sm text-white/50 mt-0.5">{projects.length} project{projects.length !== 1 ? 's' : ''}</p>
       </div>
       <div class="flex items-center gap-3">
-        <CloudAuth onChanged={refreshProjects} />
+
         <button
           onclick={() => showTemplateModal = true}
           class="px-4 py-2.5 bg-white/10 text-white rounded-lg hover:bg-white/20 font-medium text-sm transition-all flex items-center gap-2 border border-white/20"
